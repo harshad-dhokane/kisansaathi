@@ -2,6 +2,17 @@
 
 KisanSaathi is a multilingual agriculture advisory app developed by Harshad Dhokane for the Gates Foundation Option A workflow. It was chosen because it matches the real fellowship problem closely: farmer-facing crop guidance, safer next-step support, multilingual access, and a CeRAI-compatible evaluation surface in one deployable app.
 
+## Live Deployment
+
+The deployed KisanSaathi instance used for the final remote CeRAI validation is:
+
+- app root: `https://kisaansaathi-eval.vercel.app`
+- chat UI: `https://kisaansaathi-eval.vercel.app/chat`
+- results report: `https://kisaansaathi-eval.vercel.app/results`
+- health endpoint: `https://kisaansaathi-eval.vercel.app/api/health`
+- OpenAI-compatible base URL: `https://kisaansaathi-eval.vercel.app/api/openai`
+- models endpoint: `https://kisaansaathi-eval.vercel.app/api/openai/v1/models`
+
 ## What Is Implemented
 
 KisanSaathi already includes:
@@ -122,6 +133,12 @@ KisanSaathi exposes a localhost OpenAI-compatible surface for CeRAI:
 - chat completions: `http://localhost:3001/api/openai/v1/chat/completions`
 - models: `http://localhost:3001/api/openai/v1/models`
 
+Deployed OpenAI-compatible surface used for remote CeRAI validation:
+
+- base URL: `https://kisaansaathi-eval.vercel.app/api/openai`
+- chat completions: `https://kisaansaathi-eval.vercel.app/api/openai/v1/chat/completions`
+- models: `https://kisaansaathi-eval.vercel.app/api/openai/v1/models`
+
 Recommended local TDMS target when using the default Qwen setup:
 
 - `Target`: `agri-advisory-qwen32b`
@@ -130,6 +147,13 @@ Recommended local TDMS target when using the default Qwen setup:
 - `Domain`: `agriculture`
 
 If you switch the configured conversational model, the API route stays the same and only the target naming needs to stay aligned with the selected backend.
+
+Recommended deployed TDMS target used in CeRAI after the remote-target compatibility fix:
+
+- `Target`: `gpt-kisansaathi-vercel`
+- `Type`: `API`
+- `URL`: `https://kisaansaathi-eval.vercel.app/api/openai`
+- `Domain`: `agriculture`
 
 ## Vercel Deployment
 
