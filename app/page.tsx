@@ -7,9 +7,9 @@ export default function HomePage() {
       <section className="hero">
         <div className="hero-copy">
           <p className="section-kicker">Agriculture AI</p>
-          <h1>AgriSmart is built for farmer-facing advisory and CeRAI evaluation.</h1>
+          <h1>KisanSaathi is built for farmer-facing advisory and CeRAI evaluation.</h1>
           <p className="lede">
-            AgriSmart is a multilingual agriculture assistant designed for smallholder-style
+            KisanSaathi is a multilingual agriculture assistant designed for smallholder-style
             crop advisory, safer farm decision support, and structured evaluation through CeRAI.
             Use the live chat experience for demonstration, then publish your interpreted Option A
             findings through the results page.

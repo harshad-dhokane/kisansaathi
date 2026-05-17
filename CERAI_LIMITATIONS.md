@@ -1,6 +1,6 @@
 # CeRAI Evaluation Tool Limitations
 
-This document records evaluation-tool limitations observed while running the Option A agriculture chatbot assessment for `AgriSmart`.
+This document records evaluation-tool limitations observed while running the Option A agriculture chatbot assessment for `KisanSaathi`.
 
 ## 1. Strategy-metric compatibility is not clearly enforced
 

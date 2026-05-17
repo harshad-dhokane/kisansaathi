@@ -1,5 +1,5 @@
 export const appConfig = {
-  name: "AgriSmart",
+  name: "KisanSaathi",
   tagline: "Practical, multilingual crop guidance for smallholder farmers.",
   appPort: process.env.APP_PORT || "3001",
   appBaseUrl:

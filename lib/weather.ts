@@ -324,7 +324,7 @@ async function reverseGeocodeLocation(
     cache: "no-store",
     signal: AbortSignal.timeout(12000),
     headers: {
-      "User-Agent": "AgriSmart/1.0",
+      "User-Agent": "KisanSaathi/1.0",
     },
   });
 

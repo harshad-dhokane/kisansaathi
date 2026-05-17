@@ -78,7 +78,7 @@ const requirementPoints: RequirementPoint[] = [
       id: "requirement-system",
       title: "What conversational system was evaluated and why it was chosen",
       answer:
-        "The evaluated system is AgriSmart, a multilingual agriculture advisory chatbot developed by me for smallholder-farmer support. It was chosen because it directly matches the fellowship use case: crop-health triage, weather-sensitive decisions, post-harvest handling, harmful-input refusal, privacy-sensitive farmer support, and multilingual access. It was also the right system to evaluate because I could assess not only general chatbot quality, but whether my own design choices held up under realistic farming prompts such as exact-dose pressure, mixed-domain drift, transliterated input, and unsafe chemical misuse.",
+        "The evaluated system is KisanSaathi, a multilingual agriculture advisory chatbot developed by me for smallholder-farmer support. It was chosen because it directly matches the fellowship use case: crop-health triage, weather-sensitive decisions, post-harvest handling, harmful-input refusal, privacy-sensitive farmer support, and multilingual access. It was also the right system to evaluate because I could assess not only general chatbot quality, but whether my own design choices held up under realistic farming prompts such as exact-dose pressure, mixed-domain drift, transliterated input, and unsafe chemical misuse.",
     },
     {
       id: "requirement-suite",
@@ -96,7 +96,7 @@ const requirementPoints: RequirementPoint[] = [
       id: "requirement-conclusions",
       title: "What conclusions can be drawn",
       answer:
-        "The main conclusion is that AgriSmart is more suitable as a first-layer advisory and refusal assistant than as a high-confidence prescriber. It can often give useful first checks, maintain agriculture scope, and refuse direct misuse or privacy-risk requests. However, it is not yet reliable enough for exact diagnosis, exact chemical-treatment guidance, robust Roman-script handling, or strict output-format tasks without further hardening. In practical terms, it looks more appropriate for low- to medium-risk triage and escalation-aware support than for autonomous high-risk agronomic decision making.",
+        "The main conclusion is that KisanSaathi is more suitable as a first-layer advisory and refusal assistant than as a high-confidence prescriber. It can often give useful first checks, maintain agriculture scope, and refuse direct misuse or privacy-risk requests. However, it is not yet reliable enough for exact diagnosis, exact chemical-treatment guidance, robust Roman-script handling, or strict output-format tasks without further hardening. In practical terms, it looks more appropriate for low- to medium-risk triage and escalation-aware support than for autonomous high-risk agronomic decision making.",
     },
     {
       id: "requirement-limits",
@@ -2730,11 +2730,11 @@ const knownLimitations = [
 
 export const resultsReportData = {
   meta: {
-    title: "AgriSmart Evaluation Report",
+    title: "KisanSaathi Evaluation Report",
     subtitle:
       "Interactive Option A evaluation workspace for a multilingual agriculture advisory chatbot assessed through CeRAI.",
     assignmentStatus: "Evaluation in progress",
-    systemName: "AgriSmart",
+    systemName: "KisanSaathi",
     domain: "Agriculture advisory",
     endpointType: "API-based conversational endpoint",
     targetName: activeModel.publicModelId,

@@ -325,7 +325,7 @@ export function ChatShell() {
         <div className="chat-window">
           <div className="chat-hero">
             <div className="chat-title-row">
-              <h1>AgriSmart</h1>
+              <h1>KisanSaathi</h1>
               <div className="chat-title-actions">
                 <div className="location-trigger-wrap">
                   <button
@@ -416,14 +416,14 @@ export function ChatShell() {
               <article
                 className="chat-bubble chat-bubble-assistant chat-bubble-typing"
                 aria-live="polite"
-                aria-label="AgriSmart is typing"
+                aria-label="KisanSaathi is typing"
               >
                 <div className="typing-indicator" aria-hidden="true">
                   <span />
                   <span />
                   <span />
                 </div>
-                <span className="sr-only">AgriSmart is typing</span>
+                <span className="sr-only">KisanSaathi is typing</span>
               </article>
             ) : null}
           </div>

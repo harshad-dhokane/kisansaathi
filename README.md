@@ -1,10 +1,10 @@
-# AgriSmart
+# KisanSaathi
 
-AgriSmart is a multilingual agriculture advisory app developed by Harshad Dhokane for the Gates Foundation Option A workflow. It was chosen because it matches the real fellowship problem closely: farmer-facing crop guidance, safer next-step support, multilingual access, and a CeRAI-compatible evaluation surface in one deployable app.
+KisanSaathi is a multilingual agriculture advisory app developed by Harshad Dhokane for the Gates Foundation Option A workflow. It was chosen because it matches the real fellowship problem closely: farmer-facing crop guidance, safer next-step support, multilingual access, and a CeRAI-compatible evaluation surface in one deployable app.
 
 ## What Is Implemented
 
-AgriSmart already includes:
+KisanSaathi already includes:
 
 - a public landing page for demo and navigation
 - a farmer-facing `/chat` experience
@@ -20,7 +20,7 @@ AgriSmart already includes:
 
 The current app is not just a chatbot shell. It includes the implementation work needed for both demonstration and evaluation:
 
-- branded AgriSmart UI and metadata
+- branded KisanSaathi UI and metadata
 - model routing between Groq Qwen and OpenRouter Nemotron via environment configuration
 - structured prompt and plain-text fallback handling
 - live context support for date, time, location, and weather-sensitive replies
@@ -30,7 +30,7 @@ The current app is not just a chatbot shell. It includes the implementation work
 
 ## Product Behavior
 
-AgriSmart is designed to behave like a practical field advisor, not a generic assistant:
+KisanSaathi is designed to behave like a practical field advisor, not a generic assistant:
 
 - answer in the user's language when possible
 - start with the most useful direct answer
@@ -46,7 +46,7 @@ AgriSmart is designed to behave like a practical field advisor, not a generic as
 - `/`
   - landing page
 - `/chat`
-  - live AgriSmart chat experience
+  - live KisanSaathi chat experience
 - `/results`
   - executed evaluation report and submission-facing findings
 - `app/api/chat`
@@ -116,7 +116,7 @@ Default local URLs:
 
 ## CeRAI Integration
 
-AgriSmart exposes a localhost OpenAI-compatible surface for CeRAI:
+KisanSaathi exposes a localhost OpenAI-compatible surface for CeRAI:
 
 - base URL: `http://localhost:3001/api/openai`
 - chat completions: `http://localhost:3001/api/openai/v1/chat/completions`
