@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { HomeNavCard } from "@/components/home-nav-card";
 
 export default function HomePage() {
   return (
-    <main className="shell">
+    <main className="shell shell-home">
       <section className="hero">
         <div className="hero-copy">
           <p className="section-kicker">Agriculture AI</p>
@@ -23,23 +22,6 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
-      </section>
-
-      <section className="nav-grid">
-        <HomeNavCard
-          eyebrow="Option A"
-          title="Chat API + UI"
-          description="Use the live farming chatbot, inspect the guarded behavior, and connect CeRAI locally through the OpenAI-compatible route."
-          href="/chat"
-          cta="Try the chatbot"
-        />
-        <HomeNavCard
-          eyebrow="Submission"
-          title="Results"
-          description="Publish interpreted evaluation findings here once the CeRAI runs are complete, including a machine-readable summary block."
-          href="/results"
-          cta="View evaluation report"
-        />
       </section>
     </main>
   );

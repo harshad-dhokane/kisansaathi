@@ -2,9 +2,10 @@ import {
   getConversationalModelDefinition,
   getDefaultConversationalModel,
 } from "@/lib/conversational-models";
+import { appConfig } from "@/lib/config";
 
 export type CaseStatus = "Executed" | "Ready" | "Planned";
-export type PlanStatus = "In progress" | "Ready" | "Planned";
+export type PlanStatus = "Completed" | "In progress" | "Ready" | "Planned";
 
 export type RequirementPoint = {
   id: string;
@@ -2728,12 +2729,78 @@ const knownLimitations = [
     "Multilingual and transliterated cases still require manual review because the evaluator semantics are coarse and sometimes proxy-based.",
   ];
 
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values));
+}
+
+function buildExecutedCaseGroups() {
+  return caseGroups
+    .map((group) => ({
+      ...group,
+      cases: group.cases.filter((testCase) => testCase.status === "Executed"),
+    }))
+    .filter((group) => group.cases.length > 0);
+}
+
+function buildExecutedStrategyCoverage(executedCaseIds: Set<string>) {
+  return strategyCoverage
+    .map((entry) => ({
+      ...entry,
+      assignedCaseIds: entry.assignedCaseIds.filter((caseId) => executedCaseIds.has(caseId)),
+    }))
+    .filter((entry) => entry.assignedCaseIds.length > 0);
+}
+
+function buildCompletedPlans(executedGroups: TestCaseGroup[]) {
+  const planEvidence = new Map<
+    string,
+    {
+      metrics: string[];
+      runNames: string[];
+      caseCount: number;
+      strategies: string[];
+    }
+  >();
+
+  for (const group of executedGroups) {
+    planEvidence.set(group.plan, {
+      metrics: uniqueStrings(group.cases.map((testCase) => testCase.metric)),
+      runNames: uniqueStrings(
+        group.cases.map((testCase) => testCase.runName).filter(Boolean) as string[],
+      ),
+      caseCount: group.cases.length,
+      strategies: uniqueStrings(group.cases.map((testCase) => testCase.strategy)),
+    });
+  }
+
+  return plans
+    .filter((plan) => planEvidence.has(plan.name))
+    .map((plan) => {
+      const evidence = planEvidence.get(plan.name)!;
+
+      return {
+        ...plan,
+        status: "Completed" as const,
+        metrics: evidence.metrics,
+        runNames: evidence.runNames,
+        note: `${evidence.caseCount} executed cases completed in this plan across ${evidence.strategies.length} executed strategies.`,
+      };
+    });
+}
+
+const executedCaseGroups = buildExecutedCaseGroups();
+const executedCaseIds = new Set(
+  executedCaseGroups.flatMap((group) => group.cases.map((testCase) => testCase.id)),
+);
+const executedStrategyCoverage = buildExecutedStrategyCoverage(executedCaseIds);
+const completedPlans = buildCompletedPlans(executedCaseGroups);
+
 export const resultsReportData = {
   meta: {
     title: "KisanSaathi Evaluation Report",
     subtitle:
       "Interactive Option A evaluation workspace for a multilingual agriculture advisory chatbot assessed through CeRAI.",
-    assignmentStatus: "Evaluation in progress",
+    assignmentStatus: "Executed evidence compiled",
     systemName: "KisanSaathi",
     domain: "Agriculture advisory",
     endpointType: "API-based conversational endpoint",
@@ -2741,7 +2808,7 @@ export const resultsReportData = {
     conversationalModelLabel: activeModel.label,
     conversationalModelRoot: activeModel.requestModel,
     provider: activeModel.provider,
-    targetUrl: "http://localhost:3001/api/openai",
+    targetUrl: `${appConfig.appBaseUrl}/api/openai`,
     evaluationTool: "CeRAI",
     strategyDefault: "language_similarity_gt",
     activeLanguages: [
@@ -2755,46 +2822,205 @@ export const resultsReportData = {
     ],
   },
   requirementPoints,
-  plans,
-  strategyCoverage,
+  plans: completedPlans,
+  strategyCoverage: executedStrategyCoverage,
   overallSummaryCards,
   toolLimitationsReportCards,
-  caseGroups,
+  caseGroups: executedCaseGroups,
   knownLimitations,
 };
 
 export function getResultsSummaryJson() {
   const allCases = resultsReportData.caseGroups.flatMap((group) => group.cases);
-  const executedCases = allCases.filter((testCase) => testCase.status === "Executed").length;
+  const executedCases = allCases.filter((testCase) => testCase.status === "Executed");
+  const liveBaseUrl = appConfig.appBaseUrl;
+  const statusCounts = allCases.reduce<Record<string, number>>((acc, testCase) => {
+    acc[testCase.status] = (acc[testCase.status] || 0) + 1;
+    return acc;
+  }, {});
+  const planSummaries = resultsReportData.plans.map((plan) => ({
+    id: plan.id,
+    name: plan.name,
+    status: plan.status,
+    goal: plan.goal,
+    metrics: plan.metrics,
+    run_names: plan.runNames,
+  }));
+  const executedCaseRecords = executedCases.map((testCase) => ({
+    id: testCase.id,
+    status: testCase.status,
+    plan: testCase.plan,
+    metric: testCase.metric,
+    strategy: testCase.strategy,
+    language: testCase.language,
+    prompt: testCase.prompt,
+    ground_truth_focus: testCase.groundTruthFocus,
+    result_status: testCase.resultStatus,
+    current_finding: testCase.currentFinding,
+    why_it_matters: testCase.whyItMatters,
+    run_name: testCase.runName ?? null,
+    executed_at: testCase.executedAt ?? null,
+    observed_score: testCase.observedScore ?? null,
+    evaluation_result: testCase.evaluationResult ?? null,
+    score_reading: testCase.scoreReading ?? null,
+    summary_caveat: testCase.summaryCaveat ?? null,
+    what_we_learned: testCase.whatWeLearned ?? [],
+    what_it_does_not_prove: testCase.whatItDoesNotProve ?? [],
+  }));
+  const executedCaseGroups = resultsReportData.caseGroups.map((group) => ({
+    id: group.id,
+    title: group.title,
+    description: group.description,
+    plan: group.plan,
+    executed_case_count: group.cases.length,
+    cases: group.cases.map((testCase) => ({
+      id: testCase.id,
+      metric: testCase.metric,
+      strategy: testCase.strategy,
+      language: testCase.language,
+      observed_score: testCase.observedScore ?? null,
+      run_name: testCase.runName ?? null,
+      current_finding: testCase.currentFinding,
+    })),
+  }));
 
   return {
+    version: "1.0",
     path: "Option A",
-    system: resultsReportData.meta.systemName,
-    domain: resultsReportData.meta.domain,
-    endpoint_type: resultsReportData.meta.endpointType,
-    active_target: resultsReportData.meta.targetName,
-    active_model: resultsReportData.meta.conversationalModelRoot,
-    provider: resultsReportData.meta.provider,
-    evaluation_tool: resultsReportData.meta.evaluationTool,
-    total_plans: resultsReportData.plans.length,
-    total_strategy_coverage_entries: resultsReportData.strategyCoverage.length,
-    total_testcases: allCases.length,
-    executed_testcases: executedCases,
-    languages_tested_or_planned: resultsReportData.meta.activeLanguages,
-    primary_strategy: resultsReportData.meta.strategyDefault,
-    focus_areas: [
-      "accuracy",
-      "truthfulness",
-      "safety",
-      "dialogue_coherence",
-      "out_of_scope_handling",
-      "multilingual_access",
-      "privacy",
-      "robustness",
-      "content_filtering",
-      "transliterated_language",
-      "bias_resistance",
+    generated_from: "KisanSaathi results-report data",
+    system: {
+      name: resultsReportData.meta.systemName,
+      domain: resultsReportData.meta.domain,
+      endpoint_type: resultsReportData.meta.endpointType,
+      active_target: resultsReportData.meta.targetName,
+      active_model: resultsReportData.meta.conversationalModelRoot,
+      active_model_label: resultsReportData.meta.conversationalModelLabel,
+      provider: resultsReportData.meta.provider,
+      evaluation_tool: resultsReportData.meta.evaluationTool,
+      status: resultsReportData.meta.assignmentStatus,
+    },
+    repositories: {
+      primary_deliverable_repo: "https://github.com/harshad-dhokane/kisansaathi",
+      supporting_evaluation_repo: "https://github.com/harshad-dhokane/CeRAI-AIEvaluation",
+    },
+    live_endpoints: {
+      app_root: liveBaseUrl,
+      chat_ui: `${liveBaseUrl}/chat`,
+      report_ui: `${liveBaseUrl}/results`,
+      health: `${liveBaseUrl}/api/health`,
+      openai_base: `${liveBaseUrl}/api/openai`,
+      openai_models: `${liveBaseUrl}/api/openai/v1/models`,
+      machine_readable_summary: `${liveBaseUrl}/api/results-summary`,
+    },
+    submission: {
+      path_chosen: "Option A — Evaluate & Report",
+      path_reason:
+        "A real agriculture-specific endpoint was built and then evaluated through CeRAI so both chatbot behavior and evaluator behavior could be studied together.",
+      ai_use_summary:
+        "AI was used as an implementation and analysis assistant, with repeated course correction driven by direct code inspection, rerun planning, and manual interpretation of evaluator weaknesses.",
+    },
+    evaluation_scope: {
+      total_plans: resultsReportData.plans.length,
+      plans: planSummaries,
+      total_strategy_coverage_entries: resultsReportData.strategyCoverage.length,
+      total_testcases_indexed: allCases.length,
+      testcase_status_counts: statusCounts,
+      executed_testcases: executedCases.length,
+      executed_case_ids: executedCases.map((testCase) => testCase.id),
+      executed_case_records: executedCaseRecords,
+      executed_case_groups: executedCaseGroups,
+      languages_tested_or_planned: resultsReportData.meta.activeLanguages,
+      primary_strategy: resultsReportData.meta.strategyDefault,
+      focus_areas: [
+        "accuracy",
+        "truthfulness",
+        "safety",
+        "dialogue_coherence",
+        "out_of_scope_handling",
+        "multilingual_access",
+        "privacy",
+        "robustness",
+        "content_filtering",
+        "transliterated_language",
+        "bias_resistance",
+      ],
+    },
+    conclusion: {
+      product_read:
+        "KisanSaathi is strongest as a first-layer agriculture triage and refusal assistant, not as a high-confidence prescriber.",
+      strongest_capabilities: [
+        "first-step agronomy guidance",
+        "direct harmful-request refusal",
+        "privacy-aware redirection",
+        "basic agriculture-scope retention",
+      ],
+      main_risks: [
+        "unsafe overcommitment under pressure",
+        "mixed-domain drift",
+        "format-control failure",
+        "weak Roman-script and transliteration handling",
+      ],
+      interpretation_rule:
+        "Final conclusions are based on human-reviewed testcase evidence supported by CeRAI, not on blind trust in every score or generated explanation.",
+    },
+    key_findings: {
+      required_submission_points: resultsReportData.requirementPoints.map((point) => ({
+        id: point.id,
+        title: point.title,
+        answer: point.answer,
+      })),
+      overall_summary: resultsReportData.overallSummaryCards.map((card) => ({
+        id: card.id,
+        label: card.label,
+        title: card.title,
+        summary: card.summary,
+        implication: card.implication,
+        linked_case_ids: card.linkedCaseIds,
+      })),
+      evaluator_limitations: resultsReportData.toolLimitationsReportCards.map((card) => ({
+        id: card.id,
+        label: card.label,
+        title: card.title,
+        summary: card.summary,
+        implication: card.implication,
+        linked_case_ids: card.linkedCaseIds,
+      })),
+      representative_strength_cases: [
+        "AGRI_SMOKE_001",
+        "AGRI_SAFE_003",
+        "AGRI_FILTER_001",
+        "AGRI_FILTER_002",
+        "AGRI_PRIV_002",
+        "AGRI_PRIV_004",
+        "AGRI_OOD_002",
+        "AGRI_TRUTH_EXT_001",
+      ],
+      representative_bot_weakness_cases: [
+        "AGRI_SAFE_005",
+        "AGRI_ADV_001",
+        "AGRI_LANG_013",
+        "AGRI_LANG_018",
+        "AGRI_UX_006",
+        "AGRI_ENT_001",
+        "AGRI_TRANS_002",
+        "AGRI_TRANS_003",
+      ],
+      representative_evaluator_issue_cases: [
+        "AGRI_CORE_001",
+        "AGRI_LANG_002",
+        "AGRI_LANG_015",
+        "AGRI_TRUTH_EXT_002",
+        "AGRI_OOD_001",
+        "AGRI_ILG_001",
+        "AGRI_TRANS_001",
+        "AGRI_BIAS_001",
+        "AGRI_PRIV_001",
+      ],
+    },
+    evidence_sources: [
+      `${liveBaseUrl}/results`,
+      "TESTCASE_EXECUTION_LEDGER.md",
+      "CERAI_LIMITATIONS.md",
     ],
-    status: resultsReportData.meta.assignmentStatus,
   };
 }

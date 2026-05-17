@@ -1,6 +1,20 @@
 # KisanSaathi
 
-KisanSaathi is a multilingual agriculture advisory app developed by Harshad Dhokane for the Gates Foundation Option A workflow. It was chosen because it matches the real fellowship problem closely: farmer-facing crop guidance, safer next-step support, multilingual access, and a CeRAI-compatible evaluation surface in one deployable app.
+KisanSaathi is the **primary Option A deliverable** for the Gates Foundation AI Fellowship India 2026 technical assignment.
+
+It is a multilingual agriculture advisory chatbot developed by Harshad Dhokane.
+
+It was chosen because it matches the assignment’s real use case closely:
+
+- farmer-facing crop guidance
+- safer next-step support
+- multilingual access
+- a deployable live endpoint
+- a CeRAI-compatible API surface for structured evaluation
+
+The **supporting evaluation-tool repo** used in this work is:
+
+- CeRAI fork: `https://github.com/harshad-dhokane/CeRAI-AIEvaluation`
 
 ## Live Deployment
 
@@ -9,9 +23,24 @@ The deployed KisanSaathi instance used for the final remote CeRAI validation is:
 - app root: `https://kisaansaathi-eval.vercel.app`
 - chat UI: `https://kisaansaathi-eval.vercel.app/chat`
 - results report: `https://kisaansaathi-eval.vercel.app/results`
+- results summary API: `https://kisaansaathi-eval.vercel.app/api/results-summary`
 - health endpoint: `https://kisaansaathi-eval.vercel.app/api/health`
 - OpenAI-compatible base URL: `https://kisaansaathi-eval.vercel.app/api/openai`
 - models endpoint: `https://kisaansaathi-eval.vercel.app/api/openai/v1/models`
+
+## What This Repository Contains
+
+This repo contains:
+
+- the KisanSaathi application
+- the live chat surface
+- the OpenAI-compatible evaluation API
+- the final `/results` report
+- the machine-readable `/api/results-summary` output
+- the testcase execution ledger
+- the CeRAI limitation notes discovered during the assignment
+
+This repo does **not** contain the CeRAI platform itself. The CeRAI fork lives in the separate repository linked above.
 
 ## What Is Implemented
 
@@ -26,6 +55,29 @@ KisanSaathi already includes:
 - a health endpoint at `GET /api/health`
 - guardrails for harmful requests, non-agriculture drift, risky chemical guidance, and unnecessary personal-data sharing
 - multilingual prompt handling for Indian agriculture use cases
+
+## Assignment Story
+
+This project corresponds to **Option A — Evaluate & Report**.
+
+The structure is intentionally split across two repositories:
+
+- **KisanSaathi repo**
+  - the evaluated conversational system
+  - the live endpoint
+  - the final findings page
+  - the final interpretation of the executed testcases
+
+- **CeRAI fork**
+  - the evaluation infrastructure
+  - the target, plan, testcase, and rerun workflow
+  - the local bootstrap/setup for the evaluator
+  - the supporting agriculture evaluation reference
+
+That split keeps the story clean:
+
+- KisanSaathi is the product being judged
+- CeRAI is the tool used to judge it
 
 ## Implementation Summary
 
@@ -72,6 +124,10 @@ KisanSaathi is designed to behave like a practical field advisor, not a generic 
   - testcase-by-testcase execution and interpretation log
 - `CERAI_LIMITATIONS.md`
   - observed evaluator limitations from the executed runs
+- `README.md`
+  - primary app and submission-oriented documentation
+- `SUBMISSION.md`
+  - ready-to-submit assignment summary
 
 ## Environment Setup
 
@@ -125,19 +181,49 @@ Default local URLs:
 - `http://localhost:3001/chat`
 - `http://localhost:3001/results`
 
+## Why We Built Our Own Bot Instead Of Using Someone Else’s
+
+KisanSaathi was built rather than borrowing an external chatbot because the assignment was not only about running an evaluator. It was also about making sound technical decisions around a real use case.
+
+Building our own bot gave us:
+
+- control over prompt design
+- control over safety behavior
+- control over multilingual handling
+- control over the API contract
+- the ability to expose an OpenAI-compatible endpoint for CeRAI
+- the ability to interpret failures as either bot failures or evaluator limitations
+
+If we had used someone else’s bot, we could have reported scores, but we could not have meaningfully improved or explain the system design choices behind those scores.
+
 ## CeRAI Integration
+
+KisanSaathi was designed to be evaluated through CeRAI as an **API target**, not only as a visual chat UI.
+
+That decision mattered because API evaluation is:
+
+- more reproducible than browser automation
+- faster than UI-driven testing
+- less flaky than DOM-dependent interaction
+- easier to validate locally and remotely with curl and CeRAI
+
+The CeRAI fork used in this project is:
+
+- `https://github.com/harshad-dhokane/CeRAI-AIEvaluation`
 
 KisanSaathi exposes a localhost OpenAI-compatible surface for CeRAI:
 
 - base URL: `http://localhost:3001/api/openai`
 - chat completions: `http://localhost:3001/api/openai/v1/chat/completions`
 - models: `http://localhost:3001/api/openai/v1/models`
+- results summary: `http://localhost:3001/api/results-summary`
 
 Deployed OpenAI-compatible surface used for remote CeRAI validation:
 
 - base URL: `https://kisaansaathi-eval.vercel.app/api/openai`
 - chat completions: `https://kisaansaathi-eval.vercel.app/api/openai/v1/chat/completions`
 - models: `https://kisaansaathi-eval.vercel.app/api/openai/v1/models`
+- results summary: `https://kisaansaathi-eval.vercel.app/api/results-summary`
 
 Recommended local TDMS target when using the default Qwen setup:
 
@@ -154,6 +240,10 @@ Recommended deployed TDMS target used in CeRAI after the remote-target compatibi
 - `Type`: `API`
 - `URL`: `https://kisaansaathi-eval.vercel.app/api/openai`
 - `Domain`: `agriculture`
+
+For the full evaluator-side setup and rerun instructions, see the CeRAI fork README and:
+
+- `https://github.com/harshad-dhokane/CeRAI-AIEvaluation/blob/main/AGRICULTURE_EVALUATION_REFERENCE.md`
 
 ## Vercel Deployment
 
@@ -177,6 +267,22 @@ The `/results` page now contains:
 - tool-limitation report grounded in specific testcases
 - submission essentials for the Option A deliverable
 - linked testcase IDs so the viewer can trace each conclusion
+- a machine-readable summary block embedded on the page
+- a machine-readable summary endpoint at `/api/results-summary`
+
+## Repositories Used In The Assignment
+
+Primary deliverable:
+
+- KisanSaathi: `https://github.com/harshad-dhokane/kisansaathi`
+
+Supporting evaluation repo:
+
+- CeRAI fork: `https://github.com/harshad-dhokane/CeRAI-AIEvaluation`
+
+Use the KisanSaathi repo to understand the chatbot and final report.
+
+Use the CeRAI fork to understand the evaluator setup, rerun steps, and evaluation infrastructure.
 
 ## Safe Git Push Checklist
 
@@ -193,3 +299,4 @@ Before pushing:
 - [CERAI_LIMITATIONS.md](./CERAI_LIMITATIONS.md)
 - [AGRICULTURE_EVALUATION_FLOW.md](./AGRICULTURE_EVALUATION_FLOW.md)
 - [AGRICULTURE_EVALUATION_PLAN.md](./AGRICULTURE_EVALUATION_PLAN.md)
+- [SUBMISSION.md](./SUBMISSION.md)

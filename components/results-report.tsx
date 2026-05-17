@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
+
 import { resultsReportData, getResultsSummaryJson } from "@/lib/results-data";
 
 function statusClassName(status: string) {
-  if (status === "Executed" || status === "In progress") {
+  if (status === "Executed" || status === "Completed" || status === "In progress") {
     return "report-status report-status-live";
   }
 
@@ -24,20 +26,84 @@ function coverageStatusClassName(status: string) {
   return "report-status report-status-planned";
 }
 
+function renderInlineText(text: string): ReactNode[] {
+  return text
+    .split(/(`[^`]+`|\*\*[^*]+\*\*)/g)
+    .filter(Boolean)
+    .map((part, index) => {
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return <code key={index}>{part.slice(1, -1)}</code>;
+      }
+
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      }
+
+      return part;
+    });
+}
+
+function RichText({ text }: { text: string }) {
+  return <>{renderInlineText(text)}</>;
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values));
+}
+
 export function ResultsReport() {
   const summaryJson = JSON.stringify(getResultsSummaryJson(), null, 2);
-  const allCases = resultsReportData.caseGroups.flatMap((group) => group.cases);
+  const caseGroups = resultsReportData.caseGroups
+    .map((group) => ({
+      ...group,
+      cases: group.cases.filter((testCase) => testCase.status === "Executed"),
+    }))
+    .filter((group) => group.cases.length > 0);
+  const allCases = caseGroups.flatMap((group) => group.cases);
   const totalTests = allCases.length;
+  const executedCaseIds = new Set(allCases.map((testCase) => testCase.id));
+  const strategyCoverage = resultsReportData.strategyCoverage
+    .map((entry) => ({
+      ...entry,
+      assignedCaseIds: entry.assignedCaseIds.filter((caseId) => executedCaseIds.has(caseId)),
+    }))
+    .filter((entry) => entry.assignedCaseIds.length > 0);
+
+  const planEvidence = new Map<
+    string,
+    {
+      caseCount: number;
+      metrics: string[];
+      strategies: string[];
+      runNames: string[];
+    }
+  >();
+
+  for (const group of caseGroups) {
+    planEvidence.set(group.plan, {
+      caseCount: group.cases.length,
+      metrics: unique(group.cases.map((testCase) => testCase.metric)),
+      strategies: unique(group.cases.map((testCase) => testCase.strategy)),
+      runNames: unique(group.cases.map((testCase) => testCase.runName).filter(Boolean) as string[]),
+    });
+  }
+
+  const plans = resultsReportData.plans.filter((plan) => planEvidence.has(plan.name));
 
   return (
     <div className="report-layout">
+      <script
+        id="results-summary-json"
+        type="application/json"
+        dangerouslySetInnerHTML={{ __html: summaryJson }}
+      />
       <aside className="report-sidebar">
         <div className="report-sidebar-card">
           <p className="section-kicker">Results Index</p>
           <h2>{resultsReportData.meta.systemName}</h2>
           <p>
-            Interactive evaluation structure for the final fellowship submission. Use the index to
-            jump between required assignment answers, plans, and testcase groups.
+            Executed evidence only. The index below now points to the final submission sections,
+            completed plan coverage, and reviewed testcase evidence.
           </p>
           <div className="report-sidebar-stats">
             <span>{totalTests} total tests</span>
@@ -75,26 +141,26 @@ export function ResultsReport() {
           </div>
 
           <div className="report-nav-section">
-            <p className="report-nav-heading">Method and plans</p>
+            <p className="report-nav-heading">Executed coverage</p>
             <div className="report-nav-links">
               <a className="report-nav-link" href="#evaluation-setup">
                 Evaluation setup
               </a>
               <a className="report-nav-link" href="#strategy-coverage">
-                Strategy coverage
+                Executed strategies
               </a>
               <div className="report-subnav">
-                {resultsReportData.strategyCoverage.map((entry) => (
+                {strategyCoverage.map((entry) => (
                   <a key={entry.id} href={`#${entry.id}`}>
                     {entry.strategy}
                   </a>
                 ))}
               </div>
               <a className="report-nav-link" href="#plan-tracker">
-                Plan tracker
+                Completed plans
               </a>
               <div className="report-subnav">
-                {resultsReportData.plans.map((plan) => (
+                {plans.map((plan) => (
                   <a key={plan.id} href={`#${plan.id}`}>
                     {plan.name}
                   </a>
@@ -106,7 +172,7 @@ export function ResultsReport() {
           <div className="report-nav-section">
             <p className="report-nav-heading">Testcase index</p>
             <div className="report-nav-links">
-              {resultsReportData.caseGroups.map((group) => (
+              {caseGroups.map((group) => (
                 <details key={group.id} className="report-nav-group" open>
                   <summary>{group.title}</summary>
                   <div className="report-subnav">
@@ -123,7 +189,7 @@ export function ResultsReport() {
           </div>
 
           <div className="report-nav-section">
-            <p className="report-nav-heading">Closing sections</p>
+            <p className="report-nav-heading">Closing section</p>
             <div className="report-nav-links">
               <a className="report-nav-link" href="#machine-readable-summary">
                 Machine-readable summary
@@ -153,11 +219,15 @@ export function ResultsReport() {
               <strong>{resultsReportData.meta.conversationalModelLabel}</strong>
             </article>
             <article className="report-stat-card">
-              <span>Strategy default</span>
+              <span>Primary strategy family</span>
               <strong>{resultsReportData.meta.strategyDefault}</strong>
             </article>
             <article className="report-stat-card">
-              <span>Total tests</span>
+              <span>Completed plans</span>
+              <strong>{plans.length}</strong>
+            </article>
+            <article className="report-stat-card">
+              <span>Total executed tests</span>
               <strong>{totalTests}</strong>
             </article>
           </div>
@@ -168,9 +238,9 @@ export function ResultsReport() {
             <p className="section-kicker">Executive overview</p>
             <h2>Overall summary</h2>
             <p className="report-section-intro">
-              This section gives the professional read of the executed suite. It separates
-              <strong> chatbot behavior</strong> from <strong> evaluator behavior</strong> and
-              focuses only on patterns that were repeatedly observed in completed runs.
+              This section is the final professional read of the executed suite. It focuses on
+              what the chatbot actually did, where the evaluator distorted the reading, and which
+              patterns are strong enough to state confidently.
             </p>
           </div>
 
@@ -179,9 +249,11 @@ export function ResultsReport() {
               <article key={card.id} className="report-card">
                 <div className="report-card-kicker">{card.label}</div>
                 <h3>{card.title}</h3>
-                <p>{card.summary}</p>
                 <p>
-                  <strong>Why this matters:</strong> {card.implication}
+                  <RichText text={card.summary} />
+                </p>
+                <p>
+                  <strong>Why this matters:</strong> <RichText text={card.implication} />
                 </p>
 
                 <div className="report-linked-cases">
@@ -204,10 +276,9 @@ export function ResultsReport() {
             <p className="section-kicker">Evaluator review</p>
             <h2>Tool limitations report</h2>
             <p className="report-section-intro">
-              These are the <strong>real tool limitations</strong> that materially affected
-              interpretation in the executed suite. This section intentionally excludes
-              machine-specific compute setup issues and focuses on evaluator behavior that the
-              viewer should understand before trusting every score or summary at face value.
+              These are the evaluator limitations that materially changed interpretation in the
+              final suite. They are included here because several recorded scores would be
+              misleading without a human read of the testcase.
             </p>
           </div>
 
@@ -216,9 +287,11 @@ export function ResultsReport() {
               <article key={card.id} className="report-card">
                 <div className="report-card-kicker">{card.label}</div>
                 <h3>{card.title}</h3>
-                <p>{card.summary}</p>
                 <p>
-                  <strong>Practical consequence:</strong> {card.implication}
+                  <RichText text={card.summary} />
+                </p>
+                <p>
+                  <strong>Practical consequence:</strong> <RichText text={card.implication} />
                 </p>
 
                 <div className="report-linked-cases">
@@ -241,9 +314,8 @@ export function ResultsReport() {
             <p className="section-kicker">Assignment</p>
             <h2>Required submission points</h2>
             <p className="report-section-intro">
-              This section presents the five core elements required for submission: the system
-              evaluated, the rationale for choosing it, the test suite design, the conclusions
-              drawn from the results, and the key limitations that should not be generalized.
+              These five entries answer the core Option A submission requirements directly and in
+              final-report form.
             </p>
           </div>
 
@@ -252,7 +324,9 @@ export function ResultsReport() {
               <article key={point.id} className="report-card" id={point.id}>
                 <div className="report-card-kicker">Required point {index + 1}</div>
                 <h3>{point.title}</h3>
-                <p>{point.answer}</p>
+                <p>
+                  <RichText text={point.answer} />
+                </p>
               </article>
             ))}
           </div>
@@ -263,8 +337,8 @@ export function ResultsReport() {
             <p className="section-kicker">Method</p>
             <h2>Evaluation setup and scoring context</h2>
             <p className="report-section-intro">
-              This section explains the relationship between the bot, CeRAI, the target endpoint,
-              and the scoring path so the report reads as a real evaluation, not just a demo log.
+              The chatbot, evaluator, and scoring path are separated clearly here so the report is
+              read as an evidence-backed evaluation rather than a raw demo log.
             </p>
           </div>
 
@@ -300,11 +374,11 @@ export function ResultsReport() {
               <div className="report-card-kicker">Evaluator role</div>
               <h3>CeRAI role in this workflow</h3>
               <ul className="report-list">
-                <li>Store the target, plans, metrics, and testcase metadata.</li>
-                <li>Send prompts to the chatbot through the OpenAI-compatible API route.</li>
-                <li>Capture the response per testcase.</li>
-                <li>Compute strategy-based scores for each testcase.</li>
-                <li>Act as evidence infrastructure, not as the chatbot itself.</li>
+                <li>Store the target, plans, testcases, and run metadata.</li>
+                <li>Send prompts to KisanSaathi through the OpenAI-compatible API route.</li>
+                <li>Capture responses per testcase and record the selected scoring path.</li>
+                <li>Compute strategy-based outputs that are then manually reviewed in context.</li>
+                <li>Act as the evaluation framework, not as the chatbot being judged.</li>
               </ul>
             </article>
           </div>
@@ -313,55 +387,51 @@ export function ResultsReport() {
         <section className="report-section report-section-shell" id="strategy-coverage">
           <div className="report-section-header">
             <p className="section-kicker">Strategies</p>
-            <h2>CeRAI strategy coverage matrix</h2>
+            <h2>Executed strategy coverage</h2>
             <p className="report-section-intro">
-              This matrix shows which CeRAI strategy families are being exercised directly, which
-              are infrastructure-limited on the current machine, and which registry entries are not
-              appropriate for a human-authored agriculture chatbot evaluation. The goal is to make
-              strategy selection explicit rather than silently default to one matching strategy for
-              everything.
+              Only strategy families with executed testcase evidence are shown below. Removed
+              entries were excluded because they had no completed run evidence in the final suite.
             </p>
           </div>
 
           <div className="report-card-stack">
-            {resultsReportData.strategyCoverage.map((entry) => (
+            {strategyCoverage.map((entry) => (
               <article key={entry.id} className="report-card" id={entry.id}>
-                <div className="report-card-kicker">Strategy coverage</div>
+                <div className="report-card-kicker">Executed strategy</div>
                 <div className="report-card-topline">
                   <div>
                     <h3>{entry.strategy}</h3>
-                    <p>{entry.purpose}</p>
+                    <p>
+                      <RichText text={entry.purpose} />
+                    </p>
                   </div>
                   <span className={coverageStatusClassName(entry.status)}>{entry.status}</span>
                 </div>
 
                 <div className="report-meta-grid">
                   <div>
-                    <span className="report-meta-label">Metric mode</span>
-                    <p>{entry.metricMode}</p>
+                    <span className="report-meta-label">What it measured</span>
+                    <p>
+                      <RichText text={entry.metricMode} />
+                    </p>
                   </div>
                   <div>
-                    <span className="report-meta-label">Infrastructure note</span>
-                    <p>{entry.infrastructureNote}</p>
+                    <span className="report-meta-label">Reading rule</span>
+                    <p>
+                      <RichText text={entry.infrastructureNote} />
+                    </p>
                   </div>
                 </div>
 
                 <div className="report-linked-cases">
-                  <span className="report-meta-label">Linked cases</span>
-                  {entry.assignedCaseIds.length > 0 ? (
-                    <div className="report-chip-list">
-                      {entry.assignedCaseIds.map((caseId) => (
-                        <a key={caseId} className="report-chip-link" href={`#${caseId}`}>
-                          {caseId}
-                        </a>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="report-muted-note">
-                      No direct testcase is assigned because this strategy is documented as blocked
-                      or intentionally excluded from the final run set.
-                    </p>
-                  )}
+                  <span className="report-meta-label">Executed evidence</span>
+                  <div className="report-chip-list">
+                    {entry.assignedCaseIds.map((caseId) => (
+                      <a key={caseId} className="report-chip-link" href={`#${caseId}`}>
+                        {caseId}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </article>
             ))}
@@ -371,211 +441,356 @@ export function ResultsReport() {
         <section className="report-section report-section-shell" id="plan-tracker">
           <div className="report-section-header">
             <p className="section-kicker">Plans</p>
-            <h2>Evaluation plan tracker</h2>
+            <h2>Completed plan coverage</h2>
             <p className="report-section-intro">
-              Each plan exists for a specific purpose. The tracker keeps plan names, metrics, run
-              names, and execution notes aligned so evidence remains easy to interpret.
+              The plan tracker now reflects completed coverage only. Metrics, strategies, and run
+              names are taken from executed testcases rather than earlier planning notes.
             </p>
           </div>
 
           <div className="report-card-stack">
-            {resultsReportData.plans.map((plan) => (
-              <article key={plan.id} className="report-card" id={plan.id}>
-                <div className="report-card-kicker">Plan definition</div>
+            {plans.map((plan) => {
+              const evidence = planEvidence.get(plan.name);
+
+              if (!evidence) {
+                return null;
+              }
+
+              return (
+                <article key={plan.id} className="report-card" id={plan.id}>
+                  <div className="report-card-kicker">Completed plan</div>
+                  <div className="report-card-topline">
+                    <div>
+                      <h3>{plan.name}</h3>
+                      <p>
+                        <RichText text={plan.goal} />
+                      </p>
+                    </div>
+                    <span className={statusClassName(plan.status)}>{plan.status}</span>
+                  </div>
+
+                  <div className="report-plan-summary">
+                    <span className="report-evidence-pill">
+                      <strong>Cases</strong>
+                      {String(evidence.caseCount)}
+                    </span>
+                    <span className="report-evidence-pill">
+                      <strong>Metrics</strong>
+                      {String(evidence.metrics.length)}
+                    </span>
+                    <span className="report-evidence-pill">
+                      <strong>Strategies</strong>
+                      {String(evidence.strategies.length)}
+                    </span>
+                    <span className="report-evidence-pill">
+                      <strong>Runs</strong>
+                      {String(evidence.runNames.length)}
+                    </span>
+                  </div>
+
+                  <div className="report-meta-grid">
+                    <div>
+                      <span className="report-meta-label">Executed metrics</span>
+                      <div className="report-chip-list">
+                        {evidence.metrics.map((metric) => (
+                          <span key={metric} className="report-chip-link report-chip-static">
+                            {metric}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="report-meta-label">Executed strategies</span>
+                      <div className="report-chip-list">
+                        {evidence.strategies.map((strategy) => (
+                          <span key={strategy} className="report-chip-link report-chip-static">
+                            {strategy}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="report-meta-grid-full">
+                      <span className="report-meta-label">Recorded run names</span>
+                      <div className="report-chip-list">
+                        {evidence.runNames.map((runName) => (
+                          <span key={runName} className="report-chip-link report-chip-static">
+                            {runName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        {caseGroups.map((group) => {
+          const groupMetrics = unique(group.cases.map((testCase) => testCase.metric));
+          const groupStrategies = unique(group.cases.map((testCase) => testCase.strategy));
+
+          return (
+            <section key={group.id} className="report-section report-section-shell" id={group.id}>
+              <div className="report-section-header">
+                <p className="section-kicker">Testcases</p>
+                <h2>{group.title}</h2>
+                <p className="report-section-intro">
+                  <RichText text={group.description} />
+                </p>
+              </div>
+
+              <article className="report-card report-group-card">
+                <div className="report-card-kicker">Section summary</div>
                 <div className="report-card-topline">
                   <div>
-                    <h3>{plan.name}</h3>
-                    <p>{plan.goal}</p>
+                    <h3>{group.plan}</h3>
+                    <p>{group.cases.length} executed cases retained in the final report.</p>
                   </div>
-                  <span className={statusClassName(plan.status)}>{plan.status}</span>
+                  <span className="report-status report-status-live">
+                    {group.cases.length} executed
+                  </span>
+                </div>
+
+                <div className="report-plan-summary">
+                  <span className="report-evidence-pill">
+                    <strong>Metrics</strong>
+                    {String(groupMetrics.length)}
+                  </span>
+                  <span className="report-evidence-pill">
+                    <strong>Strategies</strong>
+                    {String(groupStrategies.length)}
+                  </span>
                 </div>
 
                 <div className="report-meta-grid">
                   <div>
-                    <span className="report-meta-label">Metrics</span>
-                    <p>{plan.metrics.join(", ")}</p>
+                    <span className="report-meta-label">Metrics used</span>
+                    <div className="report-chip-list">
+                      {groupMetrics.map((metric) => (
+                        <span key={metric} className="report-chip-link report-chip-static">
+                          {metric}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                   <div>
-                    <span className="report-meta-label">Run names</span>
-                    <p>{plan.runNames.join(", ")}</p>
-                  </div>
-                  <div>
-                    <span className="report-meta-label">Execution note</span>
-                    <p>{plan.note}</p>
+                    <span className="report-meta-label">Strategies used</span>
+                    <div className="report-chip-list">
+                      {groupStrategies.map((strategy) => (
+                        <span key={strategy} className="report-chip-link report-chip-static">
+                          {strategy}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </article>
-            ))}
-          </div>
-        </section>
 
-        {resultsReportData.caseGroups.map((group) => (
-          <section key={group.id} className="report-section report-section-shell" id={group.id}>
-            <div className="report-section-header">
-              <p className="section-kicker">Testcases</p>
-              <h2>{group.title}</h2>
-              <p className="report-section-intro">{group.description}</p>
-            </div>
+              <div className="report-case-stack">
+                {group.cases.map((testCase, index) => (
+                  <details
+                    key={testCase.id}
+                    className="report-case"
+                    id={testCase.id}
+                    open={index === 0}
+                  >
+                    <summary className="report-case-summary">
+                      <div className="report-case-title">
+                        <strong>{testCase.id}</strong>
+                        <span>
+                          {testCase.metric} · {testCase.strategy}
+                        </span>
+                      </div>
+                      <div className="report-case-summary-right">
+                        {testCase.observedScore && (
+                          <span className="report-case-score-inline">
+                            Score {testCase.observedScore}
+                          </span>
+                        )}
+                        <span>{testCase.language}</span>
+                        <span className={statusClassName(testCase.status)}>{testCase.status}</span>
+                      </div>
+                    </summary>
 
-            <article className="report-card report-group-card">
-              <div className="report-card-kicker">Group summary</div>
-              <div className="report-card-topline">
-                <div>
-                  <h3>{group.plan}</h3>
-                  <p>{group.description}</p>
-                </div>
-                <span className="report-status report-status-planned">
-                  {group.cases.length} cases
-                </span>
-              </div>
-            </article>
+                    <div className="report-case-body">
+                      <div className="report-plan-summary">
+                        {testCase.observedScore && (
+                          <span className="report-evidence-pill report-evidence-pill-score">
+                            <strong>Observed score</strong>
+                            {testCase.observedScore}
+                          </span>
+                        )}
+                        <span className="report-evidence-pill">
+                          <strong>Metric</strong>
+                          {testCase.metric}
+                        </span>
+                        <span className="report-evidence-pill">
+                          <strong>Strategy</strong>
+                          {testCase.strategy}
+                        </span>
+                        <span className="report-evidence-pill">
+                          <strong>Plan</strong>
+                          {testCase.plan}
+                        </span>
+                        {testCase.runName && (
+                          <span className="report-evidence-pill">
+                            <strong>Run</strong>
+                            {testCase.runName}
+                          </span>
+                        )}
+                      </div>
 
-            <div className="report-case-stack">
-              {group.cases.map((testCase) => (
-                <details
-                  key={testCase.id}
-                  className="report-case"
-                  id={testCase.id}
-                  open={testCase.status === "Executed"}
-                >
-                  <summary className="report-case-summary">
-                    <div className="report-case-title">
-                      <strong>{testCase.id}</strong>
-                      <span>{testCase.metric}</span>
-                    </div>
-                    <div className="report-case-summary-right">
-                      <span>{testCase.language}</span>
-                      <span className={statusClassName(testCase.status)}>{testCase.status}</span>
-                    </div>
-                  </summary>
-
-                  <div className="report-case-body">
-                    <div className="report-case-meta">
-                      <span>
-                        <strong>Plan:</strong> {testCase.plan}
-                      </span>
-                      <span>
-                        <strong>Strategy:</strong> {testCase.strategy}
-                      </span>
-                    </div>
-
-                    <div className="report-case-grid">
-                      <article className="report-subcard">
-                        <div className="report-subcard-label">User prompt</div>
-                        <h4>Prompt</h4>
-                        <p>{testCase.prompt}</p>
-                      </article>
-
-                      <article className="report-subcard">
-                        <div className="report-subcard-label">Ground truth</div>
-                        <h4>Ground-truth focus</h4>
-                        <p>{testCase.groundTruthFocus}</p>
-                      </article>
-
-                      <article className="report-subcard">
-                        <div className="report-subcard-label">Execution state</div>
-                        <h4>Current result status</h4>
-                        <p>{testCase.resultStatus}</p>
-                      </article>
-
-                      <article className="report-subcard">
-                        <div className="report-subcard-label">Interpretation</div>
-                        <h4>Current finding</h4>
-                        <p>{testCase.currentFinding}</p>
-                      </article>
-                    </div>
-
-                    <article className="report-subcard report-subcard-wide">
-                      <div className="report-subcard-label">Evaluation reason</div>
-                      <h4>Why this testcase matters</h4>
-                      <p>{testCase.whyItMatters}</p>
-                    </article>
-
-                    {(testCase.runName ||
-                      testCase.executedAt ||
-                      testCase.observedScore ||
-                      testCase.evaluationResult ||
-                      testCase.scoreReading ||
-                      testCase.summaryCaveat) && (
-                      <article className="report-subcard report-subcard-wide">
-                        <div className="report-subcard-label">Execution evidence</div>
-                        <h4>Observed run details</h4>
-                        <div className="report-meta-grid">
-                          {testCase.runName && (
-                            <div>
-                              <span className="report-meta-label">Run name</span>
-                              <p>{testCase.runName}</p>
-                            </div>
-                          )}
-                          {testCase.executedAt && (
-                            <div>
-                              <span className="report-meta-label">Executed at</span>
-                              <p>{testCase.executedAt}</p>
-                            </div>
-                          )}
-                          {testCase.observedScore && (
-                            <div>
-                              <span className="report-meta-label">Observed score</span>
-                              <p>{testCase.observedScore}</p>
-                            </div>
-                          )}
-                        </div>
-                        {testCase.evaluationResult && (
+                      <div className="report-case-grid">
+                        <article className="report-subcard">
+                          <div className="report-subcard-label">Prompt asked</div>
+                          <h4>User prompt</h4>
                           <p>
-                            <strong>CeRAI evaluator output:</strong> {testCase.evaluationResult}
+                            <RichText text={testCase.prompt} />
                           </p>
-                        )}
-                        {testCase.scoreReading && <p>{testCase.scoreReading}</p>}
-                        {testCase.summaryCaveat && (
-                          <p className="report-muted-note">{testCase.summaryCaveat}</p>
-                        )}
-                      </article>
-                    )}
+                        </article>
 
-                    {testCase.whatWeLearned && testCase.whatWeLearned.length > 0 && (
-                      <article className="report-subcard report-subcard-wide">
-                        <div className="report-subcard-label">Interpretation</div>
-                        <h4>What we learned from this run</h4>
-                        <ul className="report-list">
-                          {testCase.whatWeLearned.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </article>
-                    )}
+                        <article className="report-subcard">
+                          <div className="report-subcard-label">Expected behavior</div>
+                          <h4>Ground-truth focus</h4>
+                          <p>
+                            <RichText text={testCase.groundTruthFocus} />
+                          </p>
+                        </article>
 
-                    {testCase.whatItDoesNotProve && testCase.whatItDoesNotProve.length > 0 && (
-                      <article className="report-subcard report-subcard-wide">
-                        <div className="report-subcard-label">Boundary</div>
-                        <h4>What this testcase does not prove</h4>
-                        <ul className="report-list">
-                          {testCase.whatItDoesNotProve.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
+                        <article className="report-subcard">
+                          <div className="report-subcard-label">Risk being tested</div>
+                          <h4>Why this testcase matters</h4>
+                          <p>
+                            <RichText text={testCase.whyItMatters} />
+                          </p>
+                        </article>
+
+                        <article className="report-subcard">
+                          <div className="report-subcard-label">Recorded outcome</div>
+                          <h4>Execution status</h4>
+                          <p>
+                            <RichText text={testCase.resultStatus} />
+                          </p>
+                        </article>
+                      </div>
+
+                      <article className="report-subcard report-subcard-wide report-subcard-spotlight">
+                        <div className="report-subcard-label">Human review</div>
+                        <h4>What the run actually showed</h4>
+                        <p>
+                          <RichText text={testCase.currentFinding} />
+                        </p>
                       </article>
-                    )}
-                  </div>
-                </details>
-              ))}
-            </div>
-          </section>
-        ))}
+
+                      {(testCase.runName ||
+                        testCase.executedAt ||
+                        testCase.observedScore ||
+                        testCase.evaluationResult ||
+                        testCase.scoreReading) && (
+                        <article className="report-subcard report-subcard-wide">
+                          <div className="report-subcard-label">Recorded evidence</div>
+                          <h4>Run details and evaluator output</h4>
+                          <div className="report-meta-grid">
+                            {testCase.runName && (
+                              <div>
+                                <span className="report-meta-label">Run name</span>
+                                <p>
+                                  <RichText text={testCase.runName} />
+                                </p>
+                              </div>
+                            )}
+                            {testCase.executedAt && (
+                              <div>
+                                <span className="report-meta-label">Executed at</span>
+                                <p>
+                                  <RichText text={testCase.executedAt} />
+                                </p>
+                              </div>
+                            )}
+                            {testCase.observedScore && (
+                              <div>
+                                <span className="report-meta-label">Observed score</span>
+                                <p>
+                                  <RichText text={testCase.observedScore} />
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          {testCase.evaluationResult && (
+                            <p>
+                              <strong>CeRAI evaluator output:</strong>{" "}
+                              <RichText text={testCase.evaluationResult} />
+                            </p>
+                          )}
+                          {testCase.scoreReading && (
+                            <p>
+                              <strong>Score reading:</strong> <RichText text={testCase.scoreReading} />
+                            </p>
+                          )}
+                        </article>
+                      )}
+
+                      {testCase.summaryCaveat && (
+                        <article className="report-subcard report-subcard-wide report-subcard-warning">
+                          <div className="report-subcard-label">Caveat</div>
+                          <h4>Why the evaluator summary should be read carefully</h4>
+                          <p>
+                            <RichText text={testCase.summaryCaveat} />
+                          </p>
+                        </article>
+                      )}
+
+                      {testCase.whatWeLearned && testCase.whatWeLearned.length > 0 && (
+                        <article className="report-subcard report-subcard-wide">
+                          <div className="report-subcard-label">Interpretation</div>
+                          <h4>What we learned from this run</h4>
+                          <ul className="report-list">
+                            {testCase.whatWeLearned.map((item) => (
+                              <li key={item}>
+                                <RichText text={item} />
+                              </li>
+                            ))}
+                          </ul>
+                        </article>
+                      )}
+
+                      {testCase.whatItDoesNotProve && testCase.whatItDoesNotProve.length > 0 && (
+                        <article className="report-subcard report-subcard-wide">
+                          <div className="report-subcard-label">Boundary</div>
+                          <h4>What this testcase does not prove</h4>
+                          <ul className="report-list">
+                            {testCase.whatItDoesNotProve.map((item) => (
+                              <li key={item}>
+                                <RichText text={item} />
+                              </li>
+                            ))}
+                          </ul>
+                        </article>
+                      )}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </section>
+          );
+        })}
 
         <section className="report-section report-section-shell" id="machine-readable-summary">
           <div className="report-section-header">
             <p className="section-kicker">Summary</p>
             <h2>Machine-readable block</h2>
             <p className="report-section-intro">
-              This JSON block is intended for the final published report once the executed testcase
-              counts and findings have been updated.
+              The final report also exposes a structured JSON summary. It is embedded here and is
+              available directly from <code>/api/results-summary</code>.
             </p>
           </div>
 
           <article className="report-card">
             <p>
-              This block is designed for the final submission page once testcase execution and
-              findings have been fully updated.
+              This block records the evaluated system, live endpoints, executed coverage, key
+              findings, and evaluator limitations in a machine-readable format for verification and
+              reuse.
             </p>
             <pre className="report-json">{summaryJson}</pre>
           </article>

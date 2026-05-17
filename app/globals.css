@@ -75,6 +75,13 @@ textarea {
   padding: 28px 0 36px;
 }
 
+.shell-home {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .shell-chat {
   width: min(1280px, calc(100% - 32px));
   min-height: 100vh;
@@ -97,7 +104,8 @@ textarea {
 .hero {
   display: flex;
   justify-content: center;
-  margin-bottom: 18px;
+  width: 100%;
+  margin-bottom: 0;
 }
 
 .hero-copy,
@@ -120,7 +128,7 @@ textarea {
 }
 
 .hero-copy {
-  width: min(100%, 1080px);
+  width: min(100%, 1160px);
   text-align: center;
 }
 
@@ -136,9 +144,9 @@ textarea {
 }
 
 .hero-copy h1 {
-  font-size: clamp(2.3rem, 4.3vw, 4.4rem);
+  font-size: clamp(2.6rem, 4.8vw, 5rem);
   line-height: 0.96;
-  max-width: 14ch;
+  max-width: 18ch;
   margin-inline: auto;
 }
 
@@ -238,7 +246,7 @@ textarea {
 
 .nav-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 20px;
   align-items: stretch;
 }
@@ -274,6 +282,55 @@ textarea {
 .nav-card .button {
   margin-top: auto;
   align-self: flex-start;
+}
+
+.nav-main-card {
+  min-height: 0;
+  gap: 18px;
+}
+
+.nav-main-card h2 {
+  margin: 0;
+}
+
+.nav-main-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 6px;
+}
+
+.nav-main-option {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(35, 95, 63, 0.1);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.nav-main-option h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.nav-main-option p {
+  margin: 0;
+}
+
+.nav-main-option .button {
+  margin-top: auto;
+}
+
+.nav-main-option-label {
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--secondary);
+  font-family: "Avenir Next Condensed", "Gill Sans", "Trebuchet MS", sans-serif;
 }
 
 .chat-layout {
@@ -974,6 +1031,12 @@ textarea {
   line-height: 1.4;
 }
 
+.report-meta-label {
+  text-decoration: underline;
+  text-decoration-color: rgba(35, 95, 63, 0.24);
+  text-underline-offset: 4px;
+}
+
 .report-section {
   display: grid;
   gap: 14px;
@@ -1040,6 +1103,9 @@ textarea {
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--secondary);
+  text-decoration: underline;
+  text-decoration-color: rgba(35, 95, 63, 0.24);
+  text-underline-offset: 4px;
   font-family: "Avenir Next Condensed", "Gill Sans", "Trebuchet MS", sans-serif;
 }
 
@@ -1082,6 +1148,10 @@ textarea {
   gap: 14px;
 }
 
+.report-meta-grid-full {
+  grid-column: 1 / -1;
+}
+
 .report-linked-cases {
   display: grid;
   gap: 10px;
@@ -1105,6 +1175,10 @@ textarea {
   color: var(--text);
   font-size: 0.92rem;
   text-decoration: none;
+}
+
+.report-chip-static {
+  cursor: default;
 }
 
 .report-chip-link:hover {
@@ -1146,6 +1220,24 @@ textarea {
   color: var(--text);
 }
 
+.report-card code,
+.report-subcard code,
+.report-case code,
+.report-case-body code,
+.report-section-header code,
+.report-card p code,
+.report-subcard p code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(35, 95, 63, 0.12);
+  background: rgba(220, 234, 217, 0.48);
+  color: #183223;
+  font-size: 0.9em;
+}
+
 .report-list li {
   margin-bottom: 10px;
   color: var(--muted);
@@ -1183,6 +1275,19 @@ textarea {
   font-size: 0.92rem;
 }
 
+.report-case-score-inline {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(35, 95, 63, 0.14);
+  background: rgba(220, 234, 217, 0.88);
+  color: var(--accent-strong);
+  font-family: "Avenir Next Condensed", "Gill Sans", "Trebuchet MS", sans-serif;
+  font-weight: 700;
+}
+
 .report-case-summary-right {
   display: flex;
   flex-wrap: wrap;
@@ -1198,13 +1303,38 @@ textarea {
   border-top: 1px solid rgba(46, 76, 58, 0.12);
 }
 
-.report-case-meta {
+.report-plan-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 18px;
+  gap: 10px;
   padding-top: 14px;
-  color: var(--muted);
-  font-size: 0.96rem;
+}
+
+.report-evidence-pill {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(35, 95, 63, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.report-evidence-pill strong {
+  color: var(--secondary);
+  text-decoration: underline;
+  text-decoration-color: rgba(35, 95, 63, 0.24);
+  text-underline-offset: 4px;
+}
+
+.report-evidence-pill-score {
+  background: rgba(220, 234, 217, 0.88);
+  color: var(--accent-strong);
+  border-color: rgba(35, 95, 63, 0.16);
 }
 
 .report-subcard {
@@ -1237,6 +1367,19 @@ textarea {
 
 .report-subcard-wide {
   grid-column: 1 / -1;
+}
+
+.report-subcard-spotlight {
+  background:
+    linear-gradient(180deg, rgba(220, 234, 217, 0.28), rgba(255, 255, 255, 0.78)),
+    rgba(255, 255, 255, 0.58);
+}
+
+.report-subcard-warning {
+  border-color: rgba(141, 90, 43, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 246, 231, 0.86), rgba(255, 255, 255, 0.82)),
+    rgba(255, 255, 255, 0.6);
 }
 
 .report-json {
@@ -1289,6 +1432,10 @@ textarea {
 
   .hero-copy h1 {
     max-width: 100%;
+  }
+
+  .nav-main-actions {
+    grid-template-columns: 1fr;
   }
 
   .chat-hero,
@@ -1348,6 +1495,10 @@ textarea {
     width: min(100% - 20px, 1180px);
     padding-top: 18px;
     padding-bottom: 28px;
+  }
+
+  .shell-home {
+    min-height: 100dvh;
   }
 
   .hero-copy,
